@@ -1,0 +1,6 @@
+{
+  "name": "BooyahArena",
+  "description": "Free Fire Tournament Player App & Admin Operations Console — Solo, Duo, and Squad custom room tournaments with live Room ID reveal and kill-based prize settlement.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

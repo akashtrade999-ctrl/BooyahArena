@@ -1,0 +1,365 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private user account profile containing PII and default Free Fire identity.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "phoneNumber": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "ffUid": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^[0-9]*$"
+        },
+        "ign": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "totalPoints": {
+          "type": "number"
+        },
+        "totalWinnings": {
+          "type": "number"
+        },
+        "totalKills": {
+          "type": "number"
+        },
+        "matchesPlayed": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "totalPoints",
+        "totalWinnings",
+        "totalKills",
+        "matchesPlayed",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PlayerStanding": {
+      "title": "PlayerStanding",
+      "description": "Public tournament leaderboard entry without PII.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ign": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "ffUid": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^[0-9]*$"
+        },
+        "totalPoints": {
+          "type": "number"
+        },
+        "totalWinnings": {
+          "type": "number"
+        },
+        "totalKills": {
+          "type": "number"
+        },
+        "matchesPlayed": {
+          "type": "number"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "ign",
+        "totalPoints",
+        "totalWinnings",
+        "totalKills",
+        "matchesPlayed",
+        "updatedAt"
+      ]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Authorized administrator registry.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120
+        },
+        "addedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "addedAt"]
+    },
+    "Tournament": {
+      "title": "Tournament",
+      "description": "Free Fire tournament listing without private room credentials.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 100
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["Solo", "Duo", "Squad"]
+        },
+        "mapType": {
+          "type": "string",
+          "enum": ["Bermuda", "Purgatory", "Kalahari", "Alpine", "NeXTerra"]
+        },
+        "prizePool": {
+          "type": "number"
+        },
+        "perKillReward": {
+          "type": "number"
+        },
+        "entryFee": {
+          "type": "number"
+        },
+        "maxSlots": {
+          "type": "number"
+        },
+        "filledSlots": {
+          "type": "number"
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "revealAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "roomReady": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["upcoming", "live", "completed"]
+        },
+        "rulesSummary": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "createdBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "mode",
+        "mapType",
+        "prizePool",
+        "perKillReward",
+        "entryFee",
+        "maxSlots",
+        "filledSlots",
+        "startTime",
+        "revealAt",
+        "roomReady",
+        "status",
+        "createdBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "RoomCredential": {
+      "title": "RoomCredential",
+      "description": "Protected Room ID and Password revealed only to joined participants before match start.",
+      "type": "object",
+      "properties": {
+        "roomId": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 40
+        },
+        "roomPassword": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "updatedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["roomId", "roomPassword", "updatedBy", "updatedAt"]
+    },
+    "TournamentRegistration": {
+      "title": "TournamentRegistration",
+      "description": "Player registration and match settlement record for a tournament.",
+      "type": "object",
+      "properties": {
+        "tournamentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ffUid": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 20,
+          "pattern": "^[0-9]+$"
+        },
+        "ign": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 40
+        },
+        "teamName": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "partnerIgn": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "slotNumber": {
+          "type": "number"
+        },
+        "kills": {
+          "type": "number"
+        },
+        "placement": {
+          "type": "number"
+        },
+        "pointsAwarded": {
+          "type": "number"
+        },
+        "prizeAwarded": {
+          "type": "number"
+        },
+        "resultStatus": {
+          "type": "string",
+          "enum": ["pending", "settled"]
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "tournamentId",
+        "userId",
+        "ffUid",
+        "ign",
+        "slotNumber",
+        "kills",
+        "placement",
+        "pointsAwarded",
+        "prizeAwarded",
+        "resultStatus",
+        "joinedAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private player account profiles with PII isolation."
+    },
+    "/leaderboard/{userId}": {
+      "schema": { "$ref": "#/entities/PlayerStanding" },
+      "description": "Public player standings without PII."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Trusted administrator role lookup."
+    },
+    "/tournaments/{tournamentId}": {
+      "schema": { "$ref": "#/entities/Tournament" },
+      "description": "Public Free Fire tournament listings."
+    },
+    "/tournaments/{tournamentId}/roomCredentials/{credId}": {
+      "schema": { "$ref": "#/entities/RoomCredential" },
+      "description": "Gated room ID and password revealed only to joined players at reveal time."
+    },
+    "/tournaments/{tournamentId}/registrations/{userId}": {
+      "schema": { "$ref": "#/entities/TournamentRegistration" },
+      "description": "Joined players per tournament and match settlement stats."
+    }
+  }
+}

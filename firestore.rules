@@ -1,0 +1,356 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && (
+        request.auth.token.firebase.sign_in_provider == 'phone' ||
+        request.auth.token.email_verified == true
+      );
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email == 'akashtrade999@gmail.com' &&
+        request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() ||
+        (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Validation Blueprints (strict schema & size checks)
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+        'uid', 'displayName', 'totalPoints', 'totalWinnings',
+        'totalKills', 'matchesPlayed', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid', 'displayName', 'email', 'phoneNumber', 'ffUid', 'ign',
+        'totalPoints', 'totalWinnings', 'totalKills', 'matchesPlayed',
+        'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.uid) &&
+      data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+      (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
+      (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() <= 30)) &&
+      (!('ffUid' in data) || (data.ffUid is string && data.ffUid.size() <= 20 && data.ffUid.matches('^[0-9]*$'))) &&
+      (!('ign' in data) || (data.ign is string && data.ign.size() <= 40)) &&
+      data.totalPoints is number && data.totalPoints >= 0 &&
+      data.totalWinnings is number && data.totalWinnings >= 0 &&
+      data.totalKills is number && data.totalKills >= 0 &&
+      data.matchesPlayed is number && data.matchesPlayed >= 0 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidLeaderboard(data) {
+      return data.keys().hasAll([
+        'uid', 'ign', 'totalPoints', 'totalWinnings',
+        'totalKills', 'matchesPlayed', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid', 'ign', 'ffUid', 'totalPoints', 'totalWinnings',
+        'totalKills', 'matchesPlayed', 'updatedAt'
+      ]) &&
+      isValidId(data.uid) &&
+      data.ign is string && data.ign.size() >= 1 && data.ign.size() <= 40 &&
+      (!('ffUid' in data) || (data.ffUid is string && data.ffUid.size() <= 20 && data.ffUid.matches('^[0-9]*$'))) &&
+      data.totalPoints is number && data.totalPoints >= 0 &&
+      data.totalWinnings is number && data.totalWinnings >= 0 &&
+      data.totalKills is number && data.totalKills >= 0 &&
+      data.matchesPlayed is number && data.matchesPlayed >= 0 &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['uid', 'email', 'addedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'addedAt']) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 120 &&
+        data.addedAt is timestamp;
+    }
+
+    function isValidTournament(data) {
+      return data.keys().hasAll([
+        'id', 'title', 'mode', 'mapType', 'prizePool', 'perKillReward',
+        'entryFee', 'maxSlots', 'filledSlots', 'startTime', 'revealAt',
+        'roomReady', 'status', 'createdBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'title', 'mode', 'mapType', 'prizePool', 'perKillReward',
+        'entryFee', 'maxSlots', 'filledSlots', 'startTime', 'revealAt',
+        'roomReady', 'status', 'rulesSummary', 'createdBy', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.id) &&
+      data.title is string && data.title.size() >= 3 && data.title.size() <= 100 &&
+      data.mode in ['Solo', 'Duo', 'Squad'] &&
+      data.mapType in ['Bermuda', 'Purgatory', 'Kalahari', 'Alpine', 'NeXTerra'] &&
+      data.prizePool is number && data.prizePool >= 0 && data.prizePool <= 10000000 &&
+      data.perKillReward is number && data.perKillReward >= 0 && data.perKillReward <= 100000 &&
+      data.entryFee is number && data.entryFee >= 0 && data.entryFee <= 100000 &&
+      data.maxSlots is number && data.maxSlots >= 2 && data.maxSlots <= 100 &&
+      data.filledSlots is number && data.filledSlots >= 0 && data.filledSlots <= data.maxSlots &&
+      data.startTime is timestamp &&
+      data.revealAt is timestamp &&
+      data.roomReady is bool &&
+      data.status in ['upcoming', 'live', 'completed'] &&
+      (!('rulesSummary' in data) || (data.rulesSummary is string && data.rulesSummary.size() <= 500)) &&
+      isValidId(data.createdBy) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidRoomCredential(data) {
+      return data.keys().hasAll(['roomId', 'roomPassword', 'updatedBy', 'updatedAt']) &&
+        data.keys().hasOnly(['roomId', 'roomPassword', 'updatedBy', 'updatedAt']) &&
+        data.roomId is string && data.roomId.size() >= 2 && data.roomId.size() <= 40 &&
+        data.roomPassword is string && data.roomPassword.size() >= 1 && data.roomPassword.size() <= 40 &&
+        isValidId(data.updatedBy) &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidRegistration(data) {
+      return data.keys().hasAll([
+        'tournamentId', 'userId', 'ffUid', 'ign', 'slotNumber',
+        'kills', 'placement', 'pointsAwarded', 'prizeAwarded',
+        'resultStatus', 'joinedAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'tournamentId', 'userId', 'ffUid', 'ign', 'teamName', 'partnerIgn',
+        'slotNumber', 'kills', 'placement', 'pointsAwarded', 'prizeAwarded',
+        'resultStatus', 'joinedAt', 'updatedAt'
+      ]) &&
+      isValidId(data.tournamentId) &&
+      isValidId(data.userId) &&
+      data.ffUid is string && data.ffUid.size() >= 5 && data.ffUid.size() <= 20 && data.ffUid.matches('^[0-9]+$') &&
+      data.ign is string && data.ign.size() >= 2 && data.ign.size() <= 40 &&
+      (!('teamName' in data) || (data.teamName is string && data.teamName.size() <= 40)) &&
+      (!('partnerIgn' in data) || (data.partnerIgn is string && data.partnerIgn.size() <= 100)) &&
+      data.slotNumber is number && data.slotNumber >= 1 && data.slotNumber <= 100 &&
+      data.kills is number && data.kills >= 0 && data.kills <= 100 &&
+      data.placement is number && data.placement >= 0 && data.placement <= 100 &&
+      data.pointsAwarded is number && data.pointsAwarded >= 0 && data.pointsAwarded <= 10000 &&
+      data.prizeAwarded is number && data.prizeAwarded >= 0 && data.prizeAwarded <= 10000000 &&
+      data.resultStatus in ['pending', 'settled'] &&
+      data.joinedAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    // Users collection (PII isolated)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if (isSignedIn() && resource.data.uid == request.auth.uid) || isAdmin();
+
+      allow create: if isValidId(userId) &&
+        isVerifiedUser() &&
+        isOwner(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        incoming().totalPoints == 0 &&
+        incoming().totalWinnings == 0 &&
+        incoming().totalKills == 0 &&
+        incoming().matchesPlayed == 0 &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isValidId(userId) &&
+        isVerifiedUser() &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'displayName', 'email', 'phoneNumber', 'ffUid', 'ign', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if false;
+    }
+
+    // Public Leaderboard standings (zero PII)
+    match /leaderboard/{userId} {
+      allow get: if isValidId(userId);
+      allow list: if true;
+
+      allow create: if isValidId(userId) &&
+        isVerifiedUser() &&
+        isValidLeaderboard(incoming()) &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            incoming().uid == request.auth.uid &&
+            incoming().totalPoints == 0 &&
+            incoming().totalWinnings == 0 &&
+            incoming().totalKills == 0 &&
+            incoming().matchesPlayed == 0
+          )
+        );
+
+      allow update: if isValidId(userId) &&
+        isVerifiedUser() &&
+        isValidLeaderboard(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['ign', 'ffUid', 'updatedAt'])
+          )
+        );
+
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // Admins registry
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && (isOwner(adminId) || isAdmin());
+      allow list: if isBootstrappedAdmin();
+      allow create, update: if isValidId(adminId) &&
+        isAdmin() &&
+        isValidAdminRecord(incoming()) &&
+        incoming().uid == adminId;
+      allow delete: if isValidId(adminId) && isAdmin();
+    }
+
+    // Tournaments catalog (publicly readable, no PII or credentials)
+    match /tournaments/{tournamentId} {
+      allow get: if isValidId(tournamentId);
+      allow list: if true;
+
+      allow create: if isValidId(tournamentId) &&
+        isAdmin() &&
+        isValidTournament(incoming()) &&
+        incoming().id == tournamentId &&
+        incoming().createdBy == request.auth.uid &&
+        incoming().filledSlots == 0 &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isValidId(tournamentId) &&
+        isVerifiedUser() &&
+        isValidTournament(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdBy == existing().createdBy &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().status == 'upcoming' &&
+            existing().filledSlots < existing().maxSlots &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['filledSlots', 'updatedAt']) &&
+            incoming().filledSlots == existing().filledSlots + 1 &&
+            existsAfter(/databases/$(database)/documents/tournaments/$(tournamentId)/registrations/$(request.auth.uid))
+          )
+        );
+
+      allow delete: if isValidId(tournamentId) && isAdmin();
+
+      // Protected Room ID and Password subcollection
+      match /roomCredentials/{credId} {
+        allow get: if isValidId(tournamentId) && isValidId(credId) && (
+          isAdmin() ||
+          (
+            isSignedIn() &&
+            exists(/databases/$(database)/documents/tournaments/$(tournamentId)/registrations/$(request.auth.uid)) &&
+            request.time >= get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.revealAt
+          )
+        );
+        allow list: if isAdmin();
+        allow create, update: if isValidId(tournamentId) && isValidId(credId) &&
+          isAdmin() &&
+          isValidRoomCredential(incoming()) &&
+          incoming().updatedBy == request.auth.uid &&
+          incoming().updatedAt == request.time;
+        allow delete: if isValidId(tournamentId) && isValidId(credId) && isAdmin();
+      }
+
+      // Joined players per tournament
+      match /registrations/{userId} {
+        allow get: if isValidId(tournamentId) && isValidId(userId) && (
+          isAdmin() ||
+          isOwner(userId) ||
+          get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.status == 'completed'
+        );
+
+        allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) ||
+          resource.data.resultStatus == 'settled' ||
+          isAdmin();
+
+        allow create: if isValidId(tournamentId) &&
+          isValidId(userId) &&
+          isVerifiedUser() &&
+          isOwner(userId) &&
+          isValidRegistration(incoming()) &&
+          incoming().userId == request.auth.uid &&
+          incoming().tournamentId == tournamentId &&
+          incoming().kills == 0 &&
+          incoming().placement == 0 &&
+          incoming().pointsAwarded == 0 &&
+          incoming().prizeAwarded == 0 &&
+          incoming().resultStatus == 'pending' &&
+          incoming().joinedAt == request.time &&
+          incoming().updatedAt == request.time &&
+          exists(/databases/$(database)/documents/tournaments/$(tournamentId)) &&
+          get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.status == 'upcoming' &&
+          get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.filledSlots < get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.maxSlots &&
+          getAfter(/databases/$(database)/documents/tournaments/$(tournamentId)).data.filledSlots ==
+            get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.filledSlots + 1;
+
+        allow update: if isValidId(tournamentId) &&
+          isValidId(userId) &&
+          isAdmin() &&
+          isValidRegistration(incoming()) &&
+          incoming().userId == existing().userId &&
+          incoming().tournamentId == existing().tournamentId &&
+          incoming().joinedAt == existing().joinedAt &&
+          incoming().updatedAt == request.time;
+
+        allow delete: if isValidId(tournamentId) && isValidId(userId) && isAdmin();
+      }
+    }
+
+    // CollectionGroup query support for player's own "My Matches" and settled results
+    match /{path=**}/registrations/{userId} {
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        resource.data.resultStatus == 'settled' ||
+        isAdmin();
+    }
+  }
+}
